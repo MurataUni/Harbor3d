@@ -70,10 +70,10 @@ class Shipwright:
         ship.load_huge_binary_stl(path)
         return self.set_cached_parameter(ship)
 
-    def load_submodule(self, path, force_load_merged_stl=False):
+    def load_submodule(self, path, force_load_merged_stl=False, vertex_matching=True):
         obj_from_stl = self.dock.generate_ship()
         max_z_position = 0. # z_length_position
-        submodule_sehlls = load_util.load_submodule(path, force_load_merged_stl)
+        submodule_sehlls = load_util.load_submodule(path, force_load_merged_stl, vertex_matching)
         if 1 == len(submodule_sehlls):
             obj_from_stl.monocoque_shell = submodule_sehlls[0]
             # z_position calc
@@ -166,19 +166,22 @@ class Shipwright:
         return self.spheroid(radius * 2, radius, equatorial_division, step, pole_visibility)
 
     def spheroid(self, depth, radius, equatorial_division, step, pole_visibility=False):
-        step = step - 1 if pole_visibility else step + 1
         ship = self.dock.generate_ship()
-        for i in range(step):
-            if (not pole_visibility) and i == 0:
-                continue
+        if pole_visibility:
+            ship.add_rib(0., [(0.,0.)])
+        for i in range(step+1):
+            z_position_ratio = i/step
+            if i==0:
+                z_position_ratio = 1/(step*4)
+            elif i==step:
+                z_position_ratio = 1-1/(step*4)
             ship.add_rib(\
-                i * 1. / step , \
+                z_position_ratio , \
                 self.rib_edges_circular(\
-                    radius * np.sqrt(1 - np.square(i * 2. / step - 1)), \
+                    radius * np.sqrt(1 - np.square(2.*z_position_ratio-1.)), \
                     2 * np.pi, equatorial_division, True))
         if pole_visibility:
-            ship.add_rib(1., self.rib_edges_circular(\
-                0, 2 * np.pi, equatorial_division, True))
+            ship.add_rib(1., [(0.,0.)])
         self.dock.resize_keel(ship, depth)
         return self.set_cached_parameter(ship)
 
@@ -218,6 +221,15 @@ class Shipwright:
                 rim_smoothing.set_smoothing_to(rims[i+1])
 
         return self.set_cached_parameter(base)
+    
+    def scale(self, scale, target_root=None):
+        for ship in self.dock.ships:
+            if target_root == None or ship.is_contains_in_parents(target_root):
+                ship.keel.length = scale*ship.keel.length
+                for rib in ship.ribs:
+                    rib.edges = [(e[0]*scale,e[1]*scale) for e in rib.edges]
+                if ship.monocoque_shell != None:
+                    self.deformation(ship, lambda x,y,z: (x*scale,y*scale,z*scale), False) 
     
     def deformation(self, ship, deformation_fanc, recursive_1_degree=True):
         if not ship.is_monocoque():
