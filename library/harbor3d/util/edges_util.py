@@ -20,6 +20,10 @@ def size(edges):
             y_max = edge[1]
     return ((x_min, x_max),(y_min, y_max))
 
+def length(edges):
+    ((x_min, x_max),(y_min, y_max)) = size(edges)
+    return (x_max-x_min, y_max-y_min)
+
 def scale(edges, scale):
     if scale is None:
         return edges
