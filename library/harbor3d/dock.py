@@ -27,7 +27,7 @@ class Dock:
     def get_child_ship(self, parent_ship):
         childs = []
         for ship in self.ships:
-            if ship.parent == parent_ship:
+            if ship.parent is parent_ship:
                 childs.append(ship)
         return childs
 

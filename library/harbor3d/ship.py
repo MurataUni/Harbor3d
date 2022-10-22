@@ -50,6 +50,12 @@ class Ship:
         self.parents.extend(self.parent.get_parents())
         self.parents.append(self.parent)
         return self.parents
+    
+    def is_contains_in_parents(self, target_ship):
+        for ship in self.parents:
+            if ship is target_ship:
+                return True
+        return False
 
     def end(self, child):
         child.end = self
