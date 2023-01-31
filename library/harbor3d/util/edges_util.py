@@ -2,7 +2,7 @@ import numpy as np
 
 def center(edges):
     size_info = size(edges)
-    return (size_info[0][1]-size_info[0][0], size_info[1][1]-size_info[1][0])
+    return ((size_info[0][1]+size_info[0][0])/2, (size_info[1][1]+size_info[1][0])/2)
 
 def size(edges):
     x_min = edges[0][0]
