@@ -8,6 +8,7 @@ from .ship import Ship
 from .dock import Dock
 
 from .util import load_util
+from .util.bone_json_util import PostureWrapper, BoneKeys, BoneAxisValue
 
 @dataclass
 class Shipwright:
@@ -290,6 +291,65 @@ class Shipwright:
     def rotate_x(self, rad_x):
         rotate_1 = self.rotate(rad_x, -np.pi/2).void()
         return self.rotate(0., np.pi/2).parent(rotate_1).void()
+    
+    def rotate_bone_xyz_euler(self, x, y, z):
+        rotate_1 = self.rotate(-z).void()
+        rotate_2 = self.parent(rotate_1).rotate(0., y).void()
+        return self.parent(rotate_2).rotate_x(x)
+    
+    def rotate_bone(self, pw:PostureWrapper, bone_key:str):
+        rotate_info = pw.fetch_bone_rotate_dict(bone_key)
+        return self.rotate_bone_xyz_euler(rotate_info[BoneKeys.x],rotate_info[BoneKeys.y],rotate_info[BoneKeys.z])
+    
+    def load_bones(self, pw:PostureWrapper, root:str = None):
+        root_obj_name = None
+        objects = {}
+        for name in pw.fetch_bone_names():
+            if root == None:
+                if pw.fetch(name,BoneKeys.parent) == None:
+                    root_obj_name = name
+                    break
+            else:
+                if name == root:
+                    root_obj_name = name
+                    break
+        if root_obj_name == None:
+            raise Exception('root object name is invalid')
+        root_obj_rotate = self.rotate_bone(pw, root_obj_name)
+        objects[root_obj_name] = self.parent(root_obj_rotate).void(pw.fetch(root_obj_name, BoneKeys.length))
+        
+        while True:
+            target_name = None
+            for k,v in pw.postures.items():
+                if not k in objects.keys() and v[BoneKeys.parent] in objects.keys():
+                    target_name = k
+                    break
+            if target_name == None:
+                break
+            parent_name = pw.fetch(target_name, BoneKeys.parent)
+            if pw.fetch(target_name, BoneKeys.is_disconnected_to_parent):
+                parent_offset = pw.fetch(target_name, BoneKeys.parent_offset)
+                bone_axis_offset = BoneAxisValue(parent_offset[BoneKeys.offset_x], parent_offset[BoneKeys.offset_y], parent_offset[BoneKeys.offset_z])
+                obj_geta_1 = self.parent(objects[parent_name]).void(bone_axis_offset.global_z())
+                obj_geta_2 = self.parent(obj_geta_1).move_xy(bone_axis_offset.global_x(), bone_axis_offset.global_y())
+                obj_geta_3 = self.parent(obj_geta_2).rotate_bone(pw, target_name)
+                objects[target_name] = self.parent(obj_geta_3).void(pw.fetch(target_name, BoneKeys.length))
+            else:
+                obj_geta_1 = self.parent(objects[parent_name]).rotate_bone(pw, target_name)
+                objects[target_name] = self.parent(obj_geta_1).void(pw.fetch(target_name, BoneKeys.length))
+        return objects
+    
+    def load_submodules_name_match(self, bone_objects:dict, list_path:list, alias:dict = {}):
+        submodules = {}
+        for k,v in bone_objects.items():
+            for path in list_path:
+                submodule_path = os.path.join(path, k)
+                if k in alias.keys():
+                    submodule_path = os.path.join(path, alias[k])
+                if os.path.exists(submodule_path) and os.path.isdir(submodule_path):
+                    submodules[k] = self.parent(v,0.).load_submodule(submodule_path, True, False)
+                    break
+        return submodules
 
     def generate_stl(self, path, fname):
         print("output stl file: ", fname)
