@@ -15,12 +15,15 @@ class ConcatConfig:
     x_offset:float = 0.
     y_offset:float = 0.
     stage_pitch_offset:float = 0.
-    recalc_z_bias = 0.
-    recalc_x_bias = 0.
+    merge_consecutive_face:bool = True
+    recalc_z_bias:float = 0.
+    recalc_x_bias:float = 0.
 
     def __post_init__(self):
-        self.recalc_z_bias = self.stage_pitch/100.
-        self.recalc_x_bias = self.xy_plane_interval/100.
+        if self.recalc_z_bias == 0.:
+            self.recalc_z_bias = self.stage_pitch/100.
+        if self.recalc_x_bias == 0.:
+            self.recalc_x_bias = self.xy_plane_interval/100.
     
     def stage_position(self, index):
         return self.stage_pitch_offset + self.stage_pitch*index
@@ -291,9 +294,9 @@ class Concatinator:
     def write_concat(self, stage_index, f):
         self.set_stage_dict(stage_index)
         self.calc_stage(stage_index)
-        self.union_panel_xy(stage_index)
+        self.union_panel_xy(stage_index, self.catConfig)
         self.write_stage_xy(stage_index, f)
-        self.write_stage_z(stage_index, f)
+        self.write_stage_z(stage_index, f, self.catConfig)
 
     def calc_stage(self, stage_index):
         upper9_s = self.dict_stage_array[stage_index+9]
@@ -560,7 +563,7 @@ class Concatinator:
                     modified = True
         return modified
 
-    def union_panel_xy(self, stage_index):
+    def union_panel_xy(self, stage_index, catConfig: ConcatConfig):
         delete_index = []
         for index in self.dict_stage_array.keys():
             if index < stage_index-1:
@@ -584,6 +587,9 @@ class Concatinator:
         if stage_index+5 not in self.dict_array_xp_union:
             self.dict_array_xp_union[stage_index+5] = np.copy(self.default_stage_array)
         union_xp_s5 = self.dict_array_xp_union[stage_index+5]
+
+        if not catConfig.merge_consecutive_face:
+            return
         
         for x_i in range(upper3_s.shape[0]):
             for y_i in range(0,upper3_s.shape[1],3):
@@ -895,33 +901,34 @@ class Concatinator:
                             for triangle in panel_zp.triangles(UnionFlag.is_f2_union_m(union_xy_zp3, x_i, y_i)):
                                 self.write_triangle(triangle, NormalVector.y_m_side, f)
 
-    def write_stage_z(self, stage_index, f):
+    def write_stage_z(self, stage_index, f, catConfig: ConcatConfig):
         stage = self.dict_stage_array[stage_index]
         union_z = np.copy(self.default_stage_array)
-        for x_i in range(0, stage.shape[0], 3):
-            for y_i in range(0, stage.shape[1], 3):
-                if OutputFlag.is_exist_any_z_side(stage, x_i, y_i):
-                    if OutputFlag.is_exist_range_all_side(stage, x_i, x_i+2, y_i, y_i+2, OutputFlag.flag_z_p_side):
-                        UnionFlag.set_base_corner_p(union_z, x_i, y_i)
-                        UnionFlag.set_internal_p(union_z, x_i, y_i+1)
-                        UnionFlag.set_internal_p(union_z, x_i, y_i+2)
-                        UnionFlag.set_internal_p(union_z, x_i+1, y_i)
-                        UnionFlag.set_internal_p(union_z, x_i+1, y_i+1)
-                        UnionFlag.set_internal_p(union_z, x_i+1, y_i+2)
-                        UnionFlag.set_internal_p(union_z, x_i+2, y_i)
-                        UnionFlag.set_internal_p(union_z, x_i+2, y_i+1)
-                        UnionFlag.set_internal_p(union_z, x_i+2, y_i+2)
-                    
-                    if OutputFlag.is_exist_range_all_side(stage, x_i, x_i+2, y_i, y_i+2, OutputFlag.flag_z_m_side):
-                        UnionFlag.set_base_corner_m(union_z, x_i, y_i)
-                        UnionFlag.set_internal_m(union_z, x_i, y_i+1)
-                        UnionFlag.set_internal_m(union_z, x_i, y_i+2)
-                        UnionFlag.set_internal_m(union_z, x_i+1, y_i)
-                        UnionFlag.set_internal_m(union_z, x_i+1, y_i+1)
-                        UnionFlag.set_internal_m(union_z, x_i+1, y_i+2)
-                        UnionFlag.set_internal_m(union_z, x_i+2, y_i)
-                        UnionFlag.set_internal_m(union_z, x_i+2, y_i+1)
-                        UnionFlag.set_internal_m(union_z, x_i+2, y_i+2)
+        if catConfig.merge_consecutive_face:
+            for x_i in range(0, stage.shape[0], 3):
+                for y_i in range(0, stage.shape[1], 3):
+                    if OutputFlag.is_exist_any_z_side(stage, x_i, y_i):
+                        if OutputFlag.is_exist_range_all_side(stage, x_i, x_i+2, y_i, y_i+2, OutputFlag.flag_z_p_side):
+                            UnionFlag.set_base_corner_p(union_z, x_i, y_i)
+                            UnionFlag.set_internal_p(union_z, x_i, y_i+1)
+                            UnionFlag.set_internal_p(union_z, x_i, y_i+2)
+                            UnionFlag.set_internal_p(union_z, x_i+1, y_i)
+                            UnionFlag.set_internal_p(union_z, x_i+1, y_i+1)
+                            UnionFlag.set_internal_p(union_z, x_i+1, y_i+2)
+                            UnionFlag.set_internal_p(union_z, x_i+2, y_i)
+                            UnionFlag.set_internal_p(union_z, x_i+2, y_i+1)
+                            UnionFlag.set_internal_p(union_z, x_i+2, y_i+2)
+                        
+                        if OutputFlag.is_exist_range_all_side(stage, x_i, x_i+2, y_i, y_i+2, OutputFlag.flag_z_m_side):
+                            UnionFlag.set_base_corner_m(union_z, x_i, y_i)
+                            UnionFlag.set_internal_m(union_z, x_i, y_i+1)
+                            UnionFlag.set_internal_m(union_z, x_i, y_i+2)
+                            UnionFlag.set_internal_m(union_z, x_i+1, y_i)
+                            UnionFlag.set_internal_m(union_z, x_i+1, y_i+1)
+                            UnionFlag.set_internal_m(union_z, x_i+1, y_i+2)
+                            UnionFlag.set_internal_m(union_z, x_i+2, y_i)
+                            UnionFlag.set_internal_m(union_z, x_i+2, y_i+1)
+                            UnionFlag.set_internal_m(union_z, x_i+2, y_i+2)
         
         for x_i in range(stage.shape[0]):
             for y_i in range(stage.shape[1]):
