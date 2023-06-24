@@ -29,6 +29,9 @@ def scale(edges, scale):
         return edges
     return list(map(lambda t: tuple([t[0]*scale, t[1]*scale]), edges))
 
+def scale_xy(edges, scale_x=1,scale_y=1):
+    return list(map(lambda t: tuple([t[0]*scale_x, t[1]*scale_y]), edges))
+
 def translate(edges, x=0., y=0.):
     return list(map(lambda t: tuple([t[0] + x, t[1] + y]), edges))
 

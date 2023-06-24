@@ -160,6 +160,8 @@ class Dock:
                 ship.convert_to_monocoque()
             if ship.is_monocoque():
                 fname = format(divided_stl_files_count, '0>6') + ".stl"
+                if ship.has_name():
+                    fname = ship.name + ".stl"
                 file_full_name = os.path.join(dir_full_name, fname)
                 f = open(file_full_name, "wb")
                 # 80Byte padding

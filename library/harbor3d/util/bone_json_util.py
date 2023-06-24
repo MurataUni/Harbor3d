@@ -62,11 +62,20 @@ class BoneAxisValue:
 class PostureWrapper:
     postures:dict
 
+    def has_key(self, bone_key:str):
+        return bone_key in self.postures.keys()
+    
+    def has_value(self, bone_key, param_key):
+        bone = self.fetch_bone(bone_key)
+        if bone == None:
+            return False
+        return param_key in bone.keys()
+
     def fetch_bone_names(self):
         return self.postures.keys()
 
-    def fetch_bone(self, bone_key):
-        if bone_key in self.postures.keys():
+    def fetch_bone(self, bone_key:str):
+        if self.has_key(bone_key):
             return self.postures[bone_key]
         return None
     
@@ -83,14 +92,17 @@ class PostureWrapper:
         rotate[BoneKeys.z] = self.fetch(bone_key, BoneKeys.z)
         return rotate
 
-    def set_offset_on_bone_axis(self, key:str, x:float = 0., y:float = 0., z:float= 0.):
+    def set_offset_dict_on_bone_axis(self, key:str, offset: dict):
         self.postures[key][BoneKeys.is_disconnected_to_parent] = True
+        self.postures[key][BoneKeys.parent_offset] = offset
+
+    def set_offset_on_bone_axis(self, key:str, x:float = 0., y:float = 0., z:float= 0.):
         parent_offset = {}
         parent_offset[BoneKeys.offset_x] = x
         parent_offset[BoneKeys.offset_y] = y
         parent_offset[BoneKeys.offset_z] = z
         self.postures[key][BoneKeys.parent_offset] = parent_offset
-
+    
     def set_offset(self, key:str, x:float = 0., y:float = 0., z:float= 0.):
         value = GlobalAxisValue(x,y,z)
         self.set_offset_on_bone_axis(key, value.bone_x(), value.bone_y(), value.bone_z())
@@ -100,6 +112,10 @@ class PostureWrapper:
         if BoneKeys.parent_offset in self.postures[key].keys():
             del self.postures[key][BoneKeys.parent_offset]
     
+    def remove_offset_all(self):
+        for key in self.postures.keys():
+            self.remove_offset(key)
+    
     def set_length(self, key:str, length:float):
         self.postures[key][BoneKeys.length] = length
     
@@ -108,3 +124,8 @@ class PostureWrapper:
         for k,v in langth_info.items():
             if k in posture_keys:
                 self.postures[k][BoneKeys.length] = v
+    
+    def set_rotation(self, key:str, rotation:dict):
+        self.postures[key][BoneKeys.x] = rotation[BoneKeys.x]
+        self.postures[key][BoneKeys.y] = rotation[BoneKeys.y]
+        self.postures[key][BoneKeys.z] = rotation[BoneKeys.z]

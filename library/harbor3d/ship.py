@@ -20,6 +20,8 @@ class Ship:
     translation_dirty_flag:bool = field(default=False)
     parent_keels_position:float =  field(default=1.)
 
+    name: str = field(default=None)
+
     smoothing:bool = field(default=False)
     smoothing_from:any = field(default=None)
     smoothing_to:any = field(default=None)
@@ -33,6 +35,9 @@ class Ship:
 
     def length(self):
         return self.keel.length()
+
+    def has_name(self):
+        return self.name != None and len(self.name) != 0
 
     def set_parent(self, parent, position=1.):
         self.parent_keels_position = position
