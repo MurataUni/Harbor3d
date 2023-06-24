@@ -6,9 +6,11 @@ import shutil
 
 from .ship import Ship
 from .dock import Dock
+from .specification import Spec
 
 from .util import load_util
 from .util.bone_json_util import PostureWrapper, BoneKeys, BoneAxisValue
+from .util import edges_util
 
 @dataclass
 class Shipwright:
@@ -93,6 +95,73 @@ class Shipwright:
         obj_from_stl.monocoque_shell_max_z_position = max_z_position
 
         return self.set_cached_parameter(obj_from_stl)
+    
+    def create_from_spec(self, spec: Spec, only_keel=False):
+        if None != self.cached_parent:
+            self.parent(self.void())
+        if spec.wrap_offset != 0.:
+            self.parent(self.move_z_back(spec.wrap_offset))
+        if spec.needs_move():
+            x,y,z = spec.move_xyz
+            if x != 0. and y != 0.:
+                self.parent(self.move_xy(x, y))
+            elif x != 0.:
+                self.parent(self.move_x(x))
+            elif y != 0.:
+                self.parent(self.move_y(y))
+            if z < 0.:
+                self.parent(self.move_z_back(z))
+            elif z > 0.:
+                self.parent(self.void(z))
+        if spec.needs_rotation():
+            for rotate_y,rotate_z in spec.list_rotation_yz:
+                self.parent(self.rotate(rotate_y, rotate_z).void(0))
+        ship = None
+        if not only_keel:
+            if spec.is_rectangle():
+                ship = self.rectangular(spec.width(), spec.height(), spec.l)
+                rib_root = ship.ribs[0]
+                rib_tip = ship.ribs[1]
+                if spec.needs_root_end_chamfered():
+                    rib_root.position = spec.root_end_coner_length/spec.l
+                    ship.add_rib(
+                        0., 
+                        edges_util.scale_xy(
+                            rib_root.edges.copy(),
+                            spec.root_end_chamfered_ratio_w(),
+                            spec.root_end_chamfered_ratio_h()))
+                if spec.needs_tip_end_chamfered():
+                    rib_tip.position = 1.- spec.tip_end_coner_length/spec.l
+                    ship.add_rib(
+                        1., 
+                        edges_util.scale_xy(
+                            rib_tip.edges.copy(),
+                            spec.tip_end_chamfered_ratio_w(),
+                            spec.tip_end_chamfered_ratio_h()))
+            elif spec.is_pole():
+                ship = self.pole(spec.l, spec.radius(), 2*np.pi, spec.divid(), True)
+                rib_root = ship.ribs[0]
+                rib_tip = ship.ribs[1]
+                if spec.needs_root_end_chamfered():
+                    rib_root.position = spec.root_end_coner_length/spec.l
+                    ship.add_rib(
+                        0., 
+                        edges_util.scale(
+                            rib_root.edges.copy(),
+                            spec.root_end_chamfered_ratio_r()))
+                if spec.needs_tip_end_chamfered():
+                    rib_tip.position = 1.- spec.tip_end_coner_length/spec.l
+                    ship.add_rib(
+                        1., 
+                        edges_util.scale(
+                            rib_tip.edges.copy(),
+                            spec.tip_end_chamfered_ratio_r()))
+            else:
+                ship = self.void(spec.l)
+            ship.order_ribs()
+        else:
+            ship = self.void(spec.l)
+        return ship
 
     def void(self, length=0.):
         void = self.dock.generate_ship()
@@ -292,6 +361,13 @@ class Shipwright:
         rotate_1 = self.rotate(rad_x, -np.pi/2).void()
         return self.rotate(0., np.pi/2).parent(rotate_1).void()
     
+    def fetch_by_name(self, name):
+        fetched = []
+        for ship in self.dock.ships:
+            if ship.name == name:
+                fetched.append(ship)
+        return fetched
+    
     def rotate_bone_xyz_euler(self, x, y, z):
         rotate_1 = self.rotate(-z).void()
         rotate_2 = self.parent(rotate_1).rotate(0., y).void()
@@ -306,7 +382,7 @@ class Shipwright:
         objects = {}
         for name in pw.fetch_bone_names():
             if root == None:
-                if pw.fetch(name,BoneKeys.parent) == None:
+                if pw.has_value(name,BoneKeys.parent):
                     root_obj_name = name
                     break
             else:
@@ -329,9 +405,9 @@ class Shipwright:
             parent_name = pw.fetch(target_name, BoneKeys.parent)
             if pw.fetch(target_name, BoneKeys.is_disconnected_to_parent):
                 parent_offset = pw.fetch(target_name, BoneKeys.parent_offset)
-                bone_axis_offset = BoneAxisValue(parent_offset[BoneKeys.offset_x], parent_offset[BoneKeys.offset_y], parent_offset[BoneKeys.offset_z])
-                obj_geta_1 = self.parent(objects[parent_name]).void(bone_axis_offset.global_z())
-                obj_geta_2 = self.parent(obj_geta_1).move_xy(bone_axis_offset.global_x(), bone_axis_offset.global_y())
+                # bone_axis_offset = BoneAxisValue(parent_offset[BoneKeys.offset_x], parent_offset[BoneKeys.offset_y], parent_offset[BoneKeys.offset_z])
+                obj_geta_1 = self.parent(objects[parent_name]).void(parent_offset[BoneKeys.offset_z])
+                obj_geta_2 = self.parent(obj_geta_1).move_xy(parent_offset[BoneKeys.offset_x], parent_offset[BoneKeys.offset_y])
                 obj_geta_3 = self.parent(obj_geta_2).rotate_bone(pw, target_name)
                 objects[target_name] = self.parent(obj_geta_3).void(pw.fetch(target_name, BoneKeys.length))
             else:
@@ -348,6 +424,7 @@ class Shipwright:
                     submodule_path = os.path.join(path, alias[k])
                 if os.path.exists(submodule_path) and os.path.isdir(submodule_path):
                     submodules[k] = self.parent(v,0.).load_submodule(submodule_path, True, False)
+                    submodules[k].name = k
                     break
         return submodules
 
