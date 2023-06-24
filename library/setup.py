@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='harbor3d',
-    version="0.2.0",
+    version="0.2.1",
     description="STL形式のファイルを出力可能な3Dモデリングツール",
     long_description="STL形式のファイルを出力可能な3Dモデリングツール\nコーディングで3Dモデルを作成する",
     url='',
