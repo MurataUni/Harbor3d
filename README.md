@@ -3,6 +3,10 @@ Harbor3d
 
 This software is released under the Apache License 2.0, see LICENSE.txt.
 
+## Version
+
+0.2.2
+
 ## Description
 
 GUI操作に頼らない3Dモデリングツール  

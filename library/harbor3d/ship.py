@@ -173,8 +173,8 @@ class Ship:
                 rib_start = rib
         return rib_start
 
-    def load_stl(self, path):
-        self.monocoque_shell = load_util.load_binary_stl(path)
+    def load_stl(self, path, vertex_matching=False):
+        self.monocoque_shell = load_util.load_binary_stl(path, vertex_matching)
     
     def load_huge_binary_stl(self, path):
         self.monocoque_shell = load_util.load_huge_binary_stl(path)
