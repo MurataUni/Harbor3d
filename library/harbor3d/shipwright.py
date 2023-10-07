@@ -353,8 +353,14 @@ class Shipwright:
         move_1 = self.move_x(x)
         return self.parent(move_1).move_y(y)
     
+    def move_z(self, z):
+        if (z < 0.):
+            return self.move_z_back(abs(z))
+        else:
+            return self.void(z)
+
     def move_z_back(self, back_z):
-        rotate_1 = self.rotate(np.pi).void(back_z)
+        rotate_1 = self.parent(self.void()).rotate(np.pi).void(back_z)
         return self.rotate(np.pi).parent(rotate_1).void()
     
     def rotate_x(self, rad_x):
@@ -403,15 +409,15 @@ class Shipwright:
             if target_name == None:
                 break
             parent_name = pw.fetch(target_name, BoneKeys.parent)
-            if pw.fetch(target_name, BoneKeys.is_disconnected_to_parent):
-                parent_offset = pw.fetch(target_name, BoneKeys.parent_offset)
-                # bone_axis_offset = BoneAxisValue(parent_offset[BoneKeys.offset_x], parent_offset[BoneKeys.offset_y], parent_offset[BoneKeys.offset_z])
-                obj_geta_1 = self.parent(objects[parent_name]).void(parent_offset[BoneKeys.offset_z])
-                obj_geta_2 = self.parent(obj_geta_1).move_xy(parent_offset[BoneKeys.offset_x], parent_offset[BoneKeys.offset_y])
+            if pw.has_value(target_name, BoneKeys.location):
+                offset = pw.fetch(target_name, BoneKeys.location)
+                bone_axis_offset = BoneAxisValue(offset[BoneKeys.location_x], offset[BoneKeys.location_y], offset[BoneKeys.location_z])
+                obj_geta_1 = self.parent(objects[parent_name], 0.).move_z(bone_axis_offset.global_z())
+                obj_geta_2 = self.parent(obj_geta_1).move_xy(bone_axis_offset.global_x(), bone_axis_offset.global_y())
                 obj_geta_3 = self.parent(obj_geta_2).rotate_bone(pw, target_name)
                 objects[target_name] = self.parent(obj_geta_3).void(pw.fetch(target_name, BoneKeys.length))
             else:
-                obj_geta_1 = self.parent(objects[parent_name]).rotate_bone(pw, target_name)
+                obj_geta_1 = self.parent(objects[parent_name], 0.).rotate_bone(pw, target_name)
                 objects[target_name] = self.parent(obj_geta_1).void(pw.fetch(target_name, BoneKeys.length))
         return objects
     
@@ -426,7 +432,23 @@ class Shipwright:
                     submodules[k] = self.parent(v,0.).load_submodule(submodule_path, True, False)
                     submodules[k].name = k
                     break
+                if os.path.isfile(submodule_path + ".stl"):
+                    submodules[k] = self.parent(v,0.).load_stl(submodule_path + ".stl")
+                    submodules[k].name = k
+                    break
         return submodules
+    
+    def load_parent_bone_inversely(self, pw:PostureWrapper, origin:str):
+        origin_rotate = pw.fetch_bone_rotate_dict(origin)
+        origin_bone_axis_offset = BoneAxisValue(0.,0.,0.,)
+        if pw.has_value(origin, BoneKeys.location):
+            origin_location = pw.fetch(origin, BoneKeys.location)
+            origin_bone_axis_offset = BoneAxisValue(origin_location[BoneKeys.location_x], origin_location[BoneKeys.location_y], origin_location[BoneKeys.location_z])
+        parent_object_base = self.rotate_x(-origin_rotate[BoneKeys.x])
+        parent_object_base = self.parent(parent_object_base).rotate(0., -origin_rotate[BoneKeys.y]).void()
+        parent_object_base = self.parent(parent_object_base).rotate(origin_rotate[BoneKeys.z]).move_z(-origin_bone_axis_offset.global_z())
+        parent_object_base = self.parent(parent_object_base).move_xy(-origin_bone_axis_offset.global_x(), -origin_bone_axis_offset.global_y())
+        return parent_object_base
 
     def generate_stl(self, path, fname):
         print("output stl file: ", fname)
