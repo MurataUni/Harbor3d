@@ -6,11 +6,10 @@ class BoneKeys:
     z = 'z'
     y = 'y'
     x = 'x'
-    is_disconnected_to_parent = 'is_disconnected_to_parent'
-    parent_offset = 'parent_offset'
-    offset_x = 'x'
-    offset_y = 'y'
-    offset_z = 'z'
+    location = 'location'
+    location_x = 'x'
+    location_y = 'y'
+    location_z = 'z'
 
 @dataclass
 class GlobalAxisValue:
@@ -50,10 +49,10 @@ class BoneAxisValue:
         return self.x_bone
 
     def global_y(self):
-        return self.z_bone
+        return -self.z_bone
 
     def global_z(self):
-        return -self.y_bone
+        return self.y_bone
     
     def global_xyz(self):
         return (self.global_x(), self.global_y(), self.global_z())
@@ -93,28 +92,35 @@ class PostureWrapper:
         return rotate
 
     def set_offset_dict_on_bone_axis(self, key:str, offset: dict):
-        self.postures[key][BoneKeys.is_disconnected_to_parent] = True
-        self.postures[key][BoneKeys.parent_offset] = offset
+        self.postures[key][BoneKeys.location] = offset
 
     def set_offset_on_bone_axis(self, key:str, x:float = 0., y:float = 0., z:float= 0.):
-        parent_offset = {}
-        parent_offset[BoneKeys.offset_x] = x
-        parent_offset[BoneKeys.offset_y] = y
-        parent_offset[BoneKeys.offset_z] = z
-        self.postures[key][BoneKeys.parent_offset] = parent_offset
+        location = {}
+        location[BoneKeys.location_x] = x
+        location[BoneKeys.location_y] = y
+        location[BoneKeys.location_z] = z
+        self.postures[key][BoneKeys.location] = location
     
     def set_offset(self, key:str, x:float = 0., y:float = 0., z:float= 0.):
         value = GlobalAxisValue(x,y,z)
         self.set_offset_on_bone_axis(key, value.bone_x(), value.bone_y(), value.bone_z())
     
     def remove_offset(self, key:str):
-        self.postures[key][BoneKeys.is_disconnected_to_parent] = False
-        if BoneKeys.parent_offset in self.postures[key].keys():
-            del self.postures[key][BoneKeys.parent_offset]
+        if BoneKeys.location in self.postures[key]:
+            del self.postures[key][BoneKeys.location]
     
     def remove_offset_all(self):
         for key in self.postures.keys():
             self.remove_offset(key)
+
+    def remove_rotation(self, key:str):
+        self.postures[key][BoneKeys.x] = 0.
+        self.postures[key][BoneKeys.y] = 0.
+        self.postures[key][BoneKeys.z] = 0.
+
+    def remove_rotation_all(self):
+        for key in self.postures.keys():
+            self.remove_rotation(key)
     
     def set_length(self, key:str, length:float):
         self.postures[key][BoneKeys.length] = length
