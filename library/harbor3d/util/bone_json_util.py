@@ -135,3 +135,17 @@ class PostureWrapper:
         self.postures[key][BoneKeys.x] = rotation[BoneKeys.x]
         self.postures[key][BoneKeys.y] = rotation[BoneKeys.y]
         self.postures[key][BoneKeys.z] = rotation[BoneKeys.z]
+
+    def add_bone(self, key:str, parent:str, length:float):
+        self.postures[key] = {}
+        self.postures[key][BoneKeys.parent] = parent
+        self.postures[key][BoneKeys.length] = length
+        self.postures[key][BoneKeys.x] = 0. # rotation
+        self.postures[key][BoneKeys.y] = 0.
+        self.postures[key][BoneKeys.z] = 0.
+        location = {} # location
+        location[BoneKeys.location_x] = 0.
+        location[BoneKeys.location_y] = 0.
+        location[BoneKeys.location_z] = 0.
+        self.postures[key][BoneKeys.location] = location
+
