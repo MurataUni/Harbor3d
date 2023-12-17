@@ -62,6 +62,13 @@ class Shipwright:
     
     def set_smoothing_to(self, smoothing, smoothing_to):
         smoothing.set_smoothing_to(smoothing_to)
+    
+    def search_and_load_stl(self, path_list, file_name):
+        for path in path_list:
+            file = os.path.join(path, file_name)
+            if os.path.isfile(file):
+                return self.load_stl(file)
+        return None
 
     def load_stl(self, path):
         ship = self.dock.generate_ship()
