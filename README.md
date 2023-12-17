@@ -5,7 +5,7 @@ This software is released under the Apache License 2.0, see LICENSE.txt.
 
 ## Version
 
-0.2.2
+0.2.3
 
 ## Description
 
