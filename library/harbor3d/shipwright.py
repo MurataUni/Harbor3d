@@ -393,6 +393,7 @@ class Shipwright:
     def load_bones(self, pw:PostureWrapper, root:str = None):
         root_obj_name = None
         objects = {}
+        scale = {}
         for name in pw.fetch_bone_names():
             if root == None:
                 if pw.has_value(name,BoneKeys.parent):
@@ -405,7 +406,11 @@ class Shipwright:
         if root_obj_name == None:
             raise Exception('root object name is invalid')
         root_obj_rotate = self.rotate_bone(pw, root_obj_name)
-        objects[root_obj_name] = self.parent(root_obj_rotate).void(pw.fetch(root_obj_name, BoneKeys.length))
+        root_obj_scale = 1
+        if pw.has_value(root_obj_name, BoneKeys.scale):
+            root_obj_scale = pw.fetch(root_obj_name, BoneKeys.scale)
+        objects[root_obj_name] = self.parent(root_obj_rotate).void(pw.fetch(root_obj_name, BoneKeys.length*root_obj_scale))
+        scale[root_obj_name] = root_obj_scale
         
         while True:
             target_name = None
@@ -416,9 +421,13 @@ class Shipwright:
             if target_name == None:
                 break
             parent_name = pw.fetch(target_name, BoneKeys.parent)
+            obj_scale = scale[parent_name]
+            if pw.has_value(target_name, BoneKeys.scale):
+                obj_scale = obj_scale * pw.fetch(target_name, BoneKeys.scale)
+            scale[target_name] = obj_scale
             if pw.has_value(target_name, BoneKeys.location):
                 offset = pw.fetch(target_name, BoneKeys.location)
-                bone_axis_offset = BoneAxisValue(offset[BoneKeys.location_x], offset[BoneKeys.location_y], offset[BoneKeys.location_z])
+                bone_axis_offset = BoneAxisValue(offset[BoneKeys.location_x]*scale[target_name], offset[BoneKeys.location_y]*scale[target_name], offset[BoneKeys.location_z]*scale[target_name])
                 obj_geta_1 = self.parent(objects[parent_name], 0.).move_z(bone_axis_offset.global_z())
                 obj_geta_2 = self.parent(obj_geta_1).move_xy(bone_axis_offset.global_x(), bone_axis_offset.global_y())
                 obj_geta_3 = self.parent(obj_geta_2).rotate_bone(pw, target_name)
@@ -426,9 +435,9 @@ class Shipwright:
             else:
                 obj_geta_1 = self.parent(objects[parent_name], 0.).rotate_bone(pw, target_name)
                 objects[target_name] = self.parent(obj_geta_1).void(pw.fetch(target_name, BoneKeys.length))
-        return objects
+        return objects, scale
     
-    def load_submodules_name_match(self, bone_objects:dict, list_path:list, alias:dict = {}):
+    def load_submodules_name_match(self, bone_objects:dict, list_path:list, alias:dict = {}, scale:dict = {}):
         submodules = {}
         for k,v in bone_objects.items():
             for path in list_path:
@@ -437,10 +446,14 @@ class Shipwright:
                     submodule_path = os.path.join(path, alias[k])
                 if os.path.exists(submodule_path) and os.path.isdir(submodule_path):
                     submodules[k] = self.parent(v,0.).load_submodule(submodule_path, True, False)
+                    if k in scale and scale[k] != 1:
+                        self.deformation(submodules[k], lambda x,y,z: (x*scale[k],y*scale[k],z*scale[k]), False)
                     submodules[k].name = k
                     break
                 if os.path.isfile(submodule_path + ".stl"):
                     submodules[k] = self.parent(v,0.).load_stl(submodule_path + ".stl")
+                    if k in scale and scale[k] != 1:
+                        self.deformation(submodules[k], lambda x,y,z: (x*scale[k],y*scale[k],z*scale[k]), False)
                     submodules[k].name = k
                     break
         return submodules
