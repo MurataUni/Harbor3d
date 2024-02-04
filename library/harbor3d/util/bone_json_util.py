@@ -10,6 +10,7 @@ class BoneKeys:
     location_x = 'x'
     location_y = 'y'
     location_z = 'z'
+    scale = 'scale'
 
 @dataclass
 class GlobalAxisValue:
