@@ -105,7 +105,16 @@ class PostureWrapper:
     def set_offset(self, key:str, x:float = 0., y:float = 0., z:float= 0.):
         value = GlobalAxisValue(x,y,z)
         self.set_offset_on_bone_axis(key, value.bone_x(), value.bone_y(), value.bone_z())
+
+    def scale_offset(self, key:str, scale:float):
+        self.postures[key][BoneKeys.location][BoneKeys.location_x] = self.postures[key][BoneKeys.location][BoneKeys.location_x]*scale
+        self.postures[key][BoneKeys.location][BoneKeys.location_y] = self.postures[key][BoneKeys.location][BoneKeys.location_y]*scale
+        self.postures[key][BoneKeys.location][BoneKeys.location_z] = self.postures[key][BoneKeys.location][BoneKeys.location_z]*scale
     
+    def scale_offset_all(self, scale:float):
+        for key in self.postures.keys():
+            self.scale_offset(key, scale)
+
     def remove_offset(self, key:str):
         if BoneKeys.location in self.postures[key]:
             del self.postures[key][BoneKeys.location]
@@ -136,6 +145,9 @@ class PostureWrapper:
         self.postures[key][BoneKeys.x] = rotation[BoneKeys.x]
         self.postures[key][BoneKeys.y] = rotation[BoneKeys.y]
         self.postures[key][BoneKeys.z] = rotation[BoneKeys.z]
+    
+    def set_parent(self, key:str, parent:str):
+        self.postures[key][BoneKeys.parent] = parent
 
     def add_bone(self, key:str, parent:str, length:float):
         self.postures[key] = {}
