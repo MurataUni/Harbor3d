@@ -1,4 +1,5 @@
 from harbor3d.util.bone_json_util import *
+from harbor3d.util.bone_util import *
 from harbor3d.util.bpy_util import *
 from harbor3d.util.calc_util import *
 from harbor3d.util.display_util import *
